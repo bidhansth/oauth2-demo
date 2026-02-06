@@ -2,16 +2,49 @@ from fastapi import FastAPI, Depends
 from sqlalchemy import select
 from app.config import settings
 from sqlalchemy.orm import Session
-from app.database import get_db, create_tables
-from app.models import User, OAuthIdentity
+from app.database import get_db
+from app.models import User
 from app.schemas import UserResponse
 from app.oauth.client import oauth
+from app.routes import auth
+from starlette.middleware.sessions import SessionMiddleware
+from starlette.requests import Request
 
 app = FastAPI()
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.JWT_SECRET_KEY,
+    session_cookie="session",
+    max_age=1800,
+    same_site="lax",
+    https_only=False
+)
+app.include_router(auth.router)
 
 @app.get("/")
 def root():
     return {"message":"Hello"}
+
+@app.get("/debug/session")
+async def debug_session(request: Request):
+    """Debug endpoint to check session."""
+    from starlette.requests import Request as StarletteRequest
+    return {
+        "session_contents": dict(request.session),
+        "cookies": dict(request.cookies)
+    }
+
+@app.get("/debug/oauth-config")
+def debug_oauth_config():
+    google_client = oauth.create_client("google")
+    
+    return {
+        "provider": "google",
+        "has_client_id": bool(settings.GOOGLE_CLIENT_ID),
+        "has_client_secret": bool(settings.GOOGLE_CLIENT_SECRET),
+        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "client_configured": google_client is not None,
+    }
 
 @app.post("/debug/create-test-user", response_model=UserResponse)
 def debug_create_user(db: Session = Depends(get_db)):
@@ -32,15 +65,3 @@ def debug_create_user(db: Session = Depends(get_db)):
     db.commit()
     db.refresh(test_user)
     return test_user
-
-@app.get("/debug/oauth-config")
-def debug_oauth_config():
-    google_client = oauth.create_client("google")
-    
-    return {
-        "provider": "google",
-        "has_client_id": bool(settings.GOOGLE_CLIENT_ID),
-        "has_client_secret": bool(settings.GOOGLE_CLIENT_SECRET),
-        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
-        "client_configured": google_client is not None,
-    }
