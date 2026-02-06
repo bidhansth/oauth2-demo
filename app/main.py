@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db, create_tables
 from app.models import User, OAuthIdentity
 from app.schemas import UserResponse
+from app.oauth.client import oauth
 
 app = FastAPI()
 
@@ -31,3 +32,15 @@ def debug_create_user(db: Session = Depends(get_db)):
     db.commit()
     db.refresh(test_user)
     return test_user
+
+@app.get("/debug/oauth-config")
+def debug_oauth_config():
+    google_client = oauth.create_client("google")
+    
+    return {
+        "provider": "google",
+        "has_client_id": bool(settings.GOOGLE_CLIENT_ID),
+        "has_client_secret": bool(settings.GOOGLE_CLIENT_SECRET),
+        "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+        "client_configured": google_client is not None,
+    }
