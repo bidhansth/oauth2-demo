@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+authlib
+httpx
+python-jose[cryptography]
+pydantic-settings
+python-dotenv
+python-multipart
