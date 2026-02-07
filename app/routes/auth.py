@@ -16,7 +16,11 @@ async def login(request: Request):
     google = oauth.create_client("google")
     redirect_uri = settings.GOOGLE_REDIRECT_URI
     
-    return await google.authorize_redirect(request, redirect_uri)
+    return await google.authorize_redirect(
+        request,
+        redirect_uri,
+        prompt="select_account"
+    )
 
 
 @router.get("/callback")
@@ -82,17 +86,5 @@ async def callback(request: Request, db: Session = Depends(get_db)):
                 "email": user.email,
                 "name": user.name
             }
-        }
-    )
-
-
-@router.post("/logout")
-async def logout(request: Request):
-    request.session.clear()
-
-    return JSONResponse(
-        content={
-            "message": "Logged out successfully",
-            "note": "Client should delete the access token"
         }
     )
